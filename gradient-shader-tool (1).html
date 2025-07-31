@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Procedural Gradient Shader</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            display: flex;
+            gap: 0;
+            min-height: 100vh;
+        }
+        
+        .canvas-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #2a2a2a;
+            border-radius: 0;
+            padding: 0;
+            height: 100vh;
+        }
+        
+        #renderCanvas {
+            border-radius: 0;
+            box-shadow: none;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .controls {
+            width: 320px;
+            background: #1a1a1a;
+            border-radius: 0;
+            padding: 24px;
+            height: fit-content;
+            overflow-y: auto;
+            max-height: 100vh;
+            border-left: 1px solid #333;
+        }
+        
+        .control-group {
+            margin-bottom: 32px;
+        }
+        
+        .control-group:last-child {
+            margin-bottom: 0;
+        }
+        
+        .control-group h3 {
+            margin: 0 0 20px 0;
+            color: #4ade80;
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .control {
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .control label {
+            font-size: 14px;
+            color: #e5e5e5;
+            margin: 0;
+            min-width: 100px;
+            font-weight: 500;
+        }
+        
+        .control-input-group {
+            display: flex;
+            align-items: center;
+            flex: 1;
+            margin-left: 16px;
+            gap: 12px;
+        }
+        
+        .control input[type="range"] {
+            flex: 1;
+            height: 4px;
+            background: #333;
+            border-radius: 2px;
+            outline: none;
+            -webkit-appearance: none;
+            border: none;
+        }
+        
+        .control input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #4ade80;
+            cursor: pointer;
+            border: 2px solid #1a1a1a;
+        }
+        
+        .control input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #4ade80;
+            cursor: pointer;
+            border: 2px solid #1a1a1a;
+        }
+        
+        .control input[type="color"] {
+            width: 32px;
+            height: 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            background: none;
+        }
+        
+        .control input[type="text"].hex-input {
+            width: 80px;
+            height: 20px;
+            background: #333;
+            border: 1px solid #555;
+            border-radius: 4px;
+            color: #fff;
+            font-size: 12px;
+            font-family: monospace;
+            padding: 2px 6px;
+            text-transform: uppercase;
+        }
+        
+        .color-input-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .ball-controls {
+            background: #262626;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+            border: 1px solid #333;
+        }
+        
+        .ball-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        
+        .ball-controls h4 {
+            margin: 0;
+            font-size: 14px;
+            color: #e5e5e5;
+            font-weight: 600;
+        }
+        
+        .add-ball-btn {
+            width: 100%;
+            padding: 12px;
+            background: #4ade80;
+            color: #000;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .add-ball-btn:hover {
+            background: #22c55e;
+        }
+        
+        .remove-ball-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .remove-ball-btn:hover {
+            background: #dc2626;
+        }
+        
+        .value-display {
+            font-size: 12px;
+            color: #9ca3af;
+            min-width: 40px;
+            text-align: right;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="canvas-container">
+        <canvas id="renderCanvas"></canvas>
+    </div>
+    
+    <div class="controls">
+        <div class="control-group">
+            <h3>Global Settings</h3>
+            <div class="control">
+                <label>Background Color</label>
+                <div class="control-input-group">
+                    <div class="color-input-group">
+                        <input type="color" id="backgroundColor" value="#121212">
+                        <input type="text" id="backgroundColorHex" class="hex-input" value="#121212" maxlength="7">
+                    </div>
+                </div>
+            </div>
+            <div class="control">
+                <label>Movement Speed</label>
+                <div class="control-input-group">
+                    <input type="range" id="movementSpeed" min="0" max="3" step="0.1" value="0.8">
+                    <span class="value-display" id="speedValue">0.8</span>
+                </div>
+            </div>
+            <div class="control">
+                <label>Movement Range</label>
+                <div class="control-input-group">
+                    <input type="range" id="movementRange" min="20" max="200" step="5" value="40">
+                    <span class="value-display" id="rangeValue">40</span>
+                </div>
+            </div>
+            <div class="control">
+                <label>Blur Intensity</label>
+                <div class="control-input-group">
+                    <input type="range" id="blurIntensity" min="0" max="50" step="1" value="20">
+                    <span class="value-display" id="blurValue">20px</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="control-group">
+            <h3>Balls</h3>
+            <button class="add-ball-btn" onclick="addBall()">+ Add Ball</button>
+            <div id="ballControls"></div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('renderCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let balls = [
+            { x: 300, y: 300, baseX: 300, baseY: 300, size: 95, color: '#AFC3FF', phase: 0 },
+            { x: 300, y: 300, baseX: 300, baseY: 300, size: 60, color: '#FFDE5A', phase: Math.PI / 2 },
+            { x: 300, y: 300, baseX: 300, baseY: 300, size: 70, color: '#C380EF', phase: Math.PI }
+        ];
+        
+        let settings = {
+            backgroundColor: '#121212',
+            movementSpeed: 0.8,
+            movementRange: 40,
+            blurIntensity: 30
+        };
+        
+        let time = 0;
+        
+        function setupCanvas() {
+            const canvas = document.getElementById('renderCanvas');
+            const container = canvas.parentElement;
+            
+            // Set canvas size to match container
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            
+            // Update ball base positions to canvas center
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            
+            balls.forEach(ball => {
+                ball.baseX = centerX;
+                ball.baseY = centerY;
+            });
+        }
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            setupCanvas();
+        });
+        
+        function createBallControls() {
+            const container = document.getElementById('ballControls');
+            container.innerHTML = '';
+            
+            balls.forEach((ball, index) => {
+                const ballDiv = document.createElement('div');
+                ballDiv.className = 'ball-controls';
+                ballDiv.innerHTML = `
+                    <div class="ball-header">
+                        <h4>Ball ${index + 1}</h4>
+                        <button class="remove-ball-btn" onclick="removeBall(${index})">Remove</button>
+                    </div>
+                    <div class="control">
+                        <label>Color</label>
+                        <div class="control-input-group">
+                            <div class="color-input-group">
+                                <input type="color" value="${ball.color}" onchange="updateBallColor(${index}, this.value); updateBallColorHex(${index}, this.value)">
+                                <input type="text" class="hex-input" value="${ball.color}" maxlength="7" 
+                                       onchange="updateBallColorFromHex(${index}, this.value)" 
+                                       oninput="this.value = this.value.toUpperCase()">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="control">
+                        <label>Size</label>
+                        <div class="control-input-group">
+                            <input type="range" min="20" max="150" step="5" value="${ball.size}" 
+                                   oninput="updateBallSize(${index}, this.value); this.parentNode.querySelector('.value-display').textContent = this.value">
+                            <span class="value-display">${ball.size}</span>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(ballDiv);
+            });
+        }
+        
+        function addBall() {
+            const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#feca57', '#ff9ff3', '#54a0ff'];
+            const randomColor = colors[Math.floor(Math.random() * colors.length)];
+            
+            balls.push({
+                x: 300,
+                y: 300,
+                baseX: 300,
+                baseY: 300,
+                size: 60,
+                color: randomColor,
+                phase: Math.random() * Math.PI * 2
+            });
+            
+            createBallControls();
+        }
+        
+        function removeBall(index) {
+            if (balls.length > 1) {
+                balls.splice(index, 1);
+                createBallControls();
+            }
+        }
+        
+        function updateBallColor(index, color) {
+            balls[index].color = color;
+        }
+        
+        function updateBallColorHex(index, color) {
+            const hexInput = document.querySelectorAll('.hex-input')[index + 1]; // +1 because background is first
+            if (hexInput) {
+                hexInput.value = color.toUpperCase();
+            }
+        }
+        
+        function updateBallColorFromHex(index, hexValue) {
+            // Validate hex color
+            const hexRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
+            if (hexRegex.test(hexValue)) {
+                balls[index].color = hexValue;
+                // Update the color picker
+                const colorPickers = document.querySelectorAll('input[type="color"]');
+                const ballColorPicker = colorPickers[index + 1]; // +1 because background is first
+                if (ballColorPicker) {
+                    ballColorPicker.value = hexValue;
+                }
+            }
+        }
+        
+        function updateBallSize(index, size) {
+            balls[index].size = parseInt(size);
+        }
+        
+        function setupControls() {
+            const backgroundColor = document.getElementById('backgroundColor');
+            const backgroundColorHex = document.getElementById('backgroundColorHex');
+            const movementSpeed = document.getElementById('movementSpeed');
+            const movementRange = document.getElementById('movementRange');
+            const blurIntensity = document.getElementById('blurIntensity');
+            
+            if (backgroundColor) {
+                backgroundColor.addEventListener('change', (e) => {
+                    settings.backgroundColor = e.target.value;
+                    if (backgroundColorHex) {
+                        backgroundColorHex.value = e.target.value.toUpperCase();
+                    }
+                });
+            }
+            
+            if (backgroundColorHex) {
+                backgroundColorHex.addEventListener('change', (e) => {
+                    const hexRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
+                    if (hexRegex.test(e.target.value)) {
+                        settings.backgroundColor = e.target.value;
+                        if (backgroundColor) {
+                            backgroundColor.value = e.target.value;
+                        }
+                    } else {
+                        // Reset to current color if invalid
+                        e.target.value = settings.backgroundColor;
+                    }
+                });
+                
+                backgroundColorHex.addEventListener('input', (e) => {
+                    e.target.value = e.target.value.toUpperCase();
+                });
+            }
+            
+            if (movementSpeed) {
+                movementSpeed.addEventListener('input', (e) => {
+                    settings.movementSpeed = parseFloat(e.target.value);
+                    document.getElementById('speedValue').textContent = e.target.value;
+                });
+            }
+            
+            if (movementRange) {
+                movementRange.addEventListener('input', (e) => {
+                    settings.movementRange = parseInt(e.target.value);
+                    document.getElementById('rangeValue').textContent = e.target.value;
+                });
+            }
+            
+            if (blurIntensity) {
+                blurIntensity.addEventListener('input', (e) => {
+                    settings.blurIntensity = parseInt(e.target.value);
+                    document.getElementById('blurValue').textContent = e.target.value + 'px';
+                });
+            }
+        }
+        
+        function updateBallPositions() {
+            time += 0.016 * settings.movementSpeed; // ~60fps timing
+            
+            balls.forEach((ball, index) => {
+                // Create unique movement patterns for each ball
+                const offsetX = Math.sin(time + ball.phase) * settings.movementRange;
+                const offsetY = Math.cos(time * 0.7 + ball.phase + index) * settings.movementRange * 0.8;
+                
+                ball.x = ball.baseX + offsetX;
+                ball.y = ball.baseY + offsetY;
+            });
+        }
+        
+        function render() {
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Set background
+            ctx.fillStyle = settings.backgroundColor;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Apply blur effect
+            if (settings.blurIntensity > 0) {
+                ctx.filter = `blur(${settings.blurIntensity}px)`;
+            } else {
+                ctx.filter = 'none';
+            }
+            
+            // Draw balls
+            balls.forEach(ball => {
+                ctx.fillStyle = ball.color;
+                ctx.beginPath();
+                ctx.arc(ball.x, ball.y, ball.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            
+            // Reset filter for any potential UI elements
+            ctx.filter = 'none';
+        }
+        
+        function animate() {
+            updateBallPositions();
+            render();
+            requestAnimationFrame(animate);
+        }
+        
+        // Initialize
+        setupCanvas();
+        createBallControls();
+        setupControls();
+        animate();
+    </script>
+</body>
+</html>
